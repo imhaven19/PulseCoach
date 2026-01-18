@@ -15,7 +15,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import LoadingScreen from './components/LoadingScreen';
 import MealScan from './pages/MealScan';
 import { AppRoute, User, WorkoutSession } from './types';
-import { getCurrentUser, logout, addWorkoutLog } from './services/auth';
+import { supabase } from './services/supabase';
 import { supabase } from './services/supabase';
 import { WifiOff } from 'lucide-react';
 

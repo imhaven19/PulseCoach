@@ -1,0 +1,29 @@
+{
+  "name": "pulsecoach",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/genai": "^1.32.0",
+    "lucide-react": "^0.559.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "recharts": "^3.5.1",
+    "@stripe/stripe-js": "2.4.0",
+    "crypto": "^1.0.1",
+    "@vercel/node": "^5.5.16",
+    "stripe": "^20.1.2",
+    "@supabase/supabase-js": "2.42.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

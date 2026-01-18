@@ -1,0 +1,9 @@
+{
+  "name": "PulseCoach",
+  "description": "An AI fitness coach for busy professionals that turns your chaotic schedule into short, targeted workouts and recovery routines.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

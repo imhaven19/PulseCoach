@@ -1,15 +1,9 @@
-import { User, WorkoutSession, CalendarEvent } from '../types';
+import type { User, WorkoutSession, CalendarEvent } from '../types';
 
-/**
- * Check if API key is configured
- */
 export const hasApiKey = (): boolean => {
-  return !!process.env.API_KEY;
+  return typeof process !== 'undefined' && !!process.env?.API_KEY;
 };
 
-/**
- * Chat with the AI coach
- */
 export async function chatWithCoach(
   history: any[],
   message: string,
@@ -32,9 +26,6 @@ export async function chatWithCoach(
   }
 }
 
-/**
- * Generate a workout session based on user profile
- */
 export async function generateWorkout(
   user: User,
   duration?: number,
@@ -55,7 +46,15 @@ export async function generateWorkout(
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return {
+        id: crypto.randomUUID(),
+        title: `${duration ?? 30}-Minute ${focus ?? 'Full Body'} Session`,
+        focus: focus ?? 'General Fitness',
+        difficulty: user.fitnessLevel,
+        totalDuration: duration ?? 30,
+      };
+    }
 
     const data = await res.json();
     return {
@@ -67,7 +66,6 @@ export async function generateWorkout(
     };
   } catch (err) {
     console.error('Failed to generate workout:', err);
-    // Return a default workout on error
     return {
       id: crypto.randomUUID(),
       title: `${duration ?? 30}-Minute ${focus ?? 'Full Body'} Session`,
@@ -78,9 +76,6 @@ export async function generateWorkout(
   }
 }
 
-/**
- * Analyze user's calendar schedule for workout opportunities
- */
 export async function analyzeSchedule(
   events: CalendarEvent[],
   userGoal?: string
@@ -98,7 +93,6 @@ export async function analyzeSchedule(
     return data.insight ?? 'Based on your schedule, consider a quick workout during your lunch break.';
   } catch (err) {
     console.error('Failed to analyze schedule:', err);
-    // Return a helpful default message
     if (events.length === 0) {
       return 'Your calendar looks clear today - perfect for a longer training session!';
     }

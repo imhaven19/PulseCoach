@@ -1,12 +1,8 @@
 import { supabase } from './supabase';
 import type { User, WorkoutSession } from '../types';
 
-// Pending transaction storage key
 const PENDING_TX_KEY = 'pulse_pending_tx';
 
-/**
- * Get the currently logged-in user
- */
 export const getCurrentUser = async (): Promise<User | null> => {
   const { data, error } = await supabase.auth.getUser();
 
@@ -14,7 +10,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
     return null;
   }
 
-  // Try to fetch user profile from database
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
@@ -40,9 +35,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
   };
 };
 
-/**
- * Login with email and password
- */
 export const login = async (email: string, password: string): Promise<User> => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -66,16 +58,10 @@ export const login = async (email: string, password: string): Promise<User> => {
   return user;
 };
 
-/**
- * Log out the current user
- */
 export const logout = async (): Promise<void> => {
   await supabase.auth.signOut();
 };
 
-/**
- * Add a workout log
- */
 export const addWorkoutLog = async (
   userId: string,
   workout: WorkoutSession
@@ -91,9 +77,6 @@ export const addWorkoutLog = async (
   };
 };
 
-/**
- * Get pending transaction from local storage
- */
 export const getPendingTransaction = (): { method: string; orderId: string; timestamp: number } | null => {
   try {
     const stored = localStorage.getItem(PENDING_TX_KEY);
@@ -103,16 +86,18 @@ export const getPendingTransaction = (): { method: string; orderId: string; time
   }
 };
 
-/**
- * Clear pending transaction
- */
 export const clearPendingTransaction = (): void => {
   localStorage.removeItem(PENDING_TX_KEY);
 };
 
-/**
- * Start subscription for a user
- */
+export const setPendingTransaction = (method: string, orderId: string): void => {
+  localStorage.setItem(PENDING_TX_KEY, JSON.stringify({
+    method,
+    orderId,
+    timestamp: Date.now(),
+  }));
+};
+
 export const startSubscription = async (
   userId: string,
   isTrial: boolean = false,
@@ -133,9 +118,6 @@ export const startSubscription = async (
   return getCurrentUser();
 };
 
-/**
- * Toggle calendar connection for a user
- */
 export const toggleCalendarConnection = async (userId: string): Promise<User | null> => {
   const user = await getCurrentUser();
   if (!user) return null;
@@ -152,13 +134,14 @@ export const toggleCalendarConnection = async (userId: string): Promise<User | n
   return {
     ...user,
     is_calendar_connected: newValue,
-    calendarEvents: newValue ? generateMockCalendarEvents() : undefined,
+    calendarEvents: newValue ? [
+      { id: '1', title: 'Team Standup', startTime: '09:00', endTime: '09:30' },
+      { id: '2', title: 'Client Meeting', startTime: '11:00', endTime: '12:00' },
+      { id: '3', title: 'Lunch Break', startTime: '12:30', endTime: '13:30' },
+    ] : undefined,
   };
 };
 
-/**
- * Change user password
- */
 export const changePassword = async (userId: string, newPassword: string): Promise<boolean> => {
   const { error } = await supabase.auth.updateUser({
     password: newPassword,
@@ -166,9 +149,6 @@ export const changePassword = async (userId: string, newPassword: string): Promi
   return !error;
 };
 
-/**
- * Update user profile
- */
 export const updateProfile = async (
   userId: string,
   updates: Partial<{
@@ -194,9 +174,6 @@ export const updateProfile = async (
   return getCurrentUser();
 };
 
-/**
- * Get all users (admin only)
- */
 export const getAllUsers = async (): Promise<User[]> => {
   const { data, error } = await supabase
     .from('profiles')
@@ -219,9 +196,6 @@ export const getAllUsers = async (): Promise<User[]> => {
   }));
 };
 
-/**
- * Update user status (admin only)
- */
 export const updateUserStatus = async (
   userId: string,
   status: 'active' | 'disabled' | 'banned'
@@ -233,12 +207,3 @@ export const updateUserStatus = async (
 
   return !error;
 };
-
-// Helper function to generate mock calendar events
-function generateMockCalendarEvents() {
-  return [
-    { id: '1', title: 'Team Standup', startTime: '09:00', endTime: '09:30' },
-    { id: '2', title: 'Client Meeting', startTime: '11:00', endTime: '12:00' },
-    { id: '3', title: 'Lunch Break', startTime: '12:30', endTime: '13:30' },
-  ];
-}

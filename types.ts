@@ -20,11 +20,31 @@ export interface WorkoutSession {
   totalDuration: number;
 }
 
+// Calendar event type
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime?: string;
+}
+
 // User type
 export interface User {
   id: string;
   email?: string;
-  name?: string;
+  name: string;
+  goal: string;
+  equipment: string;
+  fitnessLevel: string;
   workouts?: WorkoutSession[];
-  subscription?: 'free' | 'premium';
-  }
+  subscriptionStatus: 'free' | 'starter' | 'premium';
+  billingStatus?: 'trialing' | 'active' | 'cancelled';
+  premiumEndsAt?: string;
+  is_calendar_connected?: boolean;
+  calendarEvents?: CalendarEvent[];
+  notifications_enabled?: boolean;
+  avatar_url?: string;
+  referralCode?: string;
+  isAdmin?: boolean;
+  accountStatus?: 'active' | 'disabled' | 'banned';
+}

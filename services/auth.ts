@@ -74,7 +74,7 @@ export const logout = async (): Promise<void> => {
 };
 
 /**
- * Add a workout log (example implementation)
+ * Add a workout log
  */
 export const addWorkoutLog = async (
   userId: string,
@@ -118,7 +118,7 @@ export const startSubscription = async (
   isTrial: boolean = false,
   tier: 'starter' | 'premium' = 'premium'
 ): Promise<User | null> => {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('profiles')
     .update({
       subscription_status: tier,
@@ -127,9 +127,7 @@ export const startSubscription = async (
         ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         : null,
     })
-    .eq('id', userId)
-    .select()
-    .single();
+    .eq('id', userId);
 
   if (error) return null;
   return getCurrentUser();
@@ -238,7 +236,6 @@ export const updateUserStatus = async (
 
 // Helper function to generate mock calendar events
 function generateMockCalendarEvents() {
-  const now = new Date();
   return [
     { id: '1', title: 'Team Standup', startTime: '09:00', endTime: '09:30' },
     { id: '2', title: 'Client Meeting', startTime: '11:00', endTime: '12:00' },

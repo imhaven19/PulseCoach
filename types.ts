@@ -11,6 +11,16 @@ export enum AppRoute {
   MEAL_SCAN = 'MEAL_SCAN',
 }
 
+// Exercise type
+export interface Exercise {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  type: 'strength' | 'cardio' | 'mobility' | 'rest';
+  reps?: string;
+}
+
 // Workout session type
 export interface WorkoutSession {
   id?: string;
@@ -18,6 +28,7 @@ export interface WorkoutSession {
   focus: string;
   difficulty: string;
   totalDuration: number;
+  exercises: Exercise[];
 }
 
 // Calendar event type
@@ -47,4 +58,5 @@ export interface User {
   referralCode?: string;
   isAdmin?: boolean;
   accountStatus?: 'active' | 'disabled' | 'banned';
+  isOnboardingComplete?: boolean;
 }

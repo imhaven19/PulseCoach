@@ -16,7 +16,7 @@ import LoadingScreen from './components/LoadingScreen';
 import MealScan from './pages/MealScan';
 import { AppRoute, User, WorkoutSession } from './types';
 import { supabase } from './services/supabase';
-import { supabase } from './services/supabase';
+import { getCurrentUser, logout, addWorkoutLog } from './services/auth';
 import { WifiOff } from 'lucide-react';
 
 export const App: React.FC = () => {

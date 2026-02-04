@@ -32,6 +32,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     referralCode: profile?.referral_code,
     isAdmin: profile?.is_admin ?? false,
     accountStatus: profile?.account_status ?? 'active',
+    isOnboardingComplete: profile?.is_onboarding_complete ?? false,
   };
 };
 
@@ -60,6 +61,72 @@ export const login = async (email: string, password: string): Promise<User> => {
 
 export const logout = async (): Promise<void> => {
   await supabase.auth.signOut();
+};
+
+export const signup = async (userData: {
+  name: string;
+  email: string;
+  password: string;
+  goal: string;
+  equipment: string;
+  fitnessLevel: number;
+}): Promise<User | null> => {
+  const { data, error } = await supabase.auth.signUp({
+    email: userData.email,
+    password: userData.password,
+    options: {
+      data: {
+        name: userData.name,
+        goal: userData.goal,
+        equipment: userData.equipment,
+        fitness_level: userData.fitnessLevel,
+      },
+    },
+  });
+
+  if (error) {
+    if (error.message.includes('already registered')) {
+      throw new Error('This email is already registered. Please login instead.');
+    }
+    throw new Error(error.message);
+  }
+
+  if (!data.user) {
+    return null;
+  }
+
+  // Create profile record
+  const { error: profileError } = await supabase.from('profiles').upsert({
+    id: data.user.id,
+    email: userData.email,
+    name: userData.name,
+    goal: userData.goal,
+    equipment: userData.equipment,
+    fitness_level: userData.fitnessLevel.toString(),
+    subscription_status: 'free',
+    account_status: 'active',
+    is_onboarding_complete: true,
+  });
+
+  if (profileError) {
+    console.error('Profile creation error:', profileError);
+  }
+
+  // If email confirmation is required, return null to show confirmation screen
+  if (!data.session) {
+    return null;
+  }
+
+  // Auto-confirmed, return the user
+  return getCurrentUser();
+};
+
+export const resendConfirmationEmail = async (email: string): Promise<boolean> => {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+  return !error;
 };
 
 export const addWorkoutLog = async (

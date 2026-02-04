@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, Pause, Play, CheckCircle, Dumbbell, Heart, Activity, Coffee, Zap, Wind } from 'lucide-react';
+import { X, ChevronRight, Pause, Play, CheckCircle, Dumbbell, Heart, Activity, Coffee, Zap, Wind, SkipForward } from 'lucide-react';
 import { WorkoutSession, Exercise } from '../types';
 
 interface WorkoutSessionProps {
@@ -8,6 +7,59 @@ interface WorkoutSessionProps {
   onComplete: () => void;
   onClose: () => void;
 }
+
+// --- Countdown Screen Component ---
+const CountdownScreen = ({ onComplete }: { onComplete: () => void }) => {
+  const [count, setCount] = useState(3);
+
+  useEffect(() => {
+    if (count === 0) {
+      onComplete();
+      return;
+    }
+    const timer = setTimeout(() => setCount(count - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [count, onComplete]);
+
+  return (
+    <div className="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center">
+      <style>{`
+        @keyframes countdown-pulse {
+          0% { transform: scale(0.8); opacity: 0; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes ring-expand {
+          0% { transform: scale(0.5); opacity: 1; }
+          100% { transform: scale(2); opacity: 0; }
+        }
+        .countdown-number { animation: countdown-pulse 0.5s ease-out; }
+        .countdown-ring { animation: ring-expand 1s ease-out infinite; }
+      `}</style>
+      
+      <div className="relative">
+        {/* Expanding rings */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-48 h-48 border-4 border-primary/30 rounded-full countdown-ring" />
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-48 h-48 border-4 border-primary/20 rounded-full countdown-ring" style={{ animationDelay: '0.3s' }} />
+        </div>
+        
+        {/* Main countdown number */}
+        <div className="w-48 h-48 bg-primary rounded-full flex items-center justify-center shadow-2xl shadow-primary/50">
+          <span key={count} className="text-8xl font-black text-white countdown-number">
+            {count === 0 ? 'GO!' : count}
+          </span>
+        </div>
+      </div>
+      
+      <p className="text-white/60 text-sm font-bold uppercase tracking-widest mt-12">
+        Get Ready
+      </p>
+    </div>
+  );
+};
 
 // --- Enhanced Immersive Visualizers ---
 
@@ -31,7 +83,6 @@ const StrengthVisualizer = ({ isActive }: { isActive: boolean }) => (
       .animate-orbit { animation: orbit 3s linear infinite; }
     `}</style>
     
-    {/* Aura Rings */}
     <div className={`absolute inset-0 border-4 border-violet-500/10 rounded-full ${isActive ? 'animate-pulse' : ''}`} />
     <div className={`absolute inset-4 border-2 border-violet-500/5 rounded-full ${isActive ? 'animate-spin' : ''}`} style={{ animationDuration: '8s' }} />
     
@@ -172,28 +223,60 @@ const ExerciseVisualizer = ({ type, isActive }: { type: string; isActive: boolea
   }
 };
 
+// --- Exercise Preview Card ---
+const ExercisePreviewCard = ({ exercise, index, isNext }: { exercise: Exercise; index: number; isNext: boolean }) => {
+  const getTypeColor = (type: string) => {
+    switch(type) {
+      case 'strength': return 'bg-violet-100 dark:bg-violet-900/30 text-violet-600';
+      case 'cardio': return 'bg-red-100 dark:bg-red-900/30 text-red-600';
+      case 'mobility': return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600';
+      case 'rest': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600';
+      default: return 'bg-slate-100 dark:bg-slate-800 text-slate-600';
+    }
+  };
+
+  return (
+    <div className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${isNext ? 'bg-slate-100 dark:bg-slate-800 scale-100' : 'bg-slate-50 dark:bg-slate-900 scale-95 opacity-60'}`}>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${getTypeColor(exercise.type)}`}>
+        {index + 1}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{exercise.name}</p>
+        <p className="text-xs text-slate-500">{exercise.duration}s</p>
+      </div>
+      {isNext && <ChevronRight size={16} className="text-slate-400" />}
+    </div>
+  );
+};
+
 const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComplete, onClose }) => {
+  const [showCountdown, setShowCountdown] = useState(true);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(session.exercises[0].duration);
+  const [timeLeft, setTimeLeft] = useState(session.exercises[0]?.duration ?? 60);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [totalElapsed, setTotalElapsed] = useState(0);
 
   const currentExercise = session.exercises[currentExerciseIndex];
   const totalExercises = session.exercises.length;
   const progress = ((currentExerciseIndex) / totalExercises) * 100;
+  const totalWorkoutSeconds = session.exercises.reduce((sum, ex) => sum + ex.duration, 0);
 
   useEffect(() => {
-    setTimeLeft(currentExercise.duration);
-    setIsPlaying(true);
-  }, [currentExerciseIndex, currentExercise]);
+    if (!showCountdown && currentExercise) {
+      setTimeLeft(currentExercise.duration);
+      setIsPlaying(true);
+    }
+  }, [currentExerciseIndex, currentExercise, showCountdown]);
 
   useEffect(() => {
-    let interval: any;
+    let interval: NodeJS.Timeout;
     if (isPlaying && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
+        setTotalElapsed((prev) => prev + 1);
       }, 1000);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && isPlaying) {
       handleNext();
     }
     return () => clearInterval(interval);
@@ -220,32 +303,42 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
 
   const getThemeColor = (type: string) => {
     switch(type) {
-      case 'strength': return '#8b5cf6'; // violet-500
-      case 'cardio': return '#ef4444';   // red-500
-      case 'mobility': return '#10b981'; // emerald-500
-      case 'rest': return '#3b82f6';     // blue-500
-      default: return '#00B8A9';         // primary
+      case 'strength': return '#8b5cf6';
+      case 'cardio': return '#ef4444';
+      case 'mobility': return '#10b981';
+      case 'rest': return '#3b82f6';
+      default: return '#00B8A9';
     }
   };
 
-  const themeColor = getThemeColor(currentExercise.type);
+  // Show countdown screen first
+  if (showCountdown) {
+    return <CountdownScreen onComplete={() => setShowCountdown(false)} />;
+  }
+
+  const themeColor = getThemeColor(currentExercise?.type ?? 'rest');
 
   if (isFinished) {
     return (
       <div className="fixed inset-0 bg-primary z-[100] flex flex-col items-center justify-center text-white p-6 animate-in fade-in zoom-in duration-300">
-        <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6">
+        <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 animate-bounce">
           <CheckCircle size={48} className="text-white" />
         </div>
-        <h1 className="text-4xl font-bold mb-2">Session Complete!</h1>
-        <p className="text-white/80 mb-8 text-center">You crushed that {session.totalDuration} min session.</p>
+        <h1 className="text-4xl font-black mb-2 uppercase tracking-tight">Session Complete!</h1>
+        <p className="text-white/80 mb-2 text-center">You crushed that {session.totalDuration} min session.</p>
+        <p className="text-white/60 text-sm mb-8">{totalExercises} exercises completed</p>
         <button 
           onClick={onComplete}
-          className="w-full max-w-xs bg-white text-primary font-bold py-4 rounded-xl shadow-lg hover:bg-slate-50 transition-colors"
+          className="w-full max-w-xs bg-white text-primary font-black py-4 rounded-2xl shadow-lg hover:bg-slate-50 transition-colors uppercase tracking-wider text-sm"
         >
           Save Progress
         </button>
       </div>
-    )
+    );
+  }
+
+  if (!currentExercise) {
+    return null;
   }
 
   const radius = 135;
@@ -270,6 +363,9 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
               style={{ width: `${progress}%`, backgroundColor: themeColor }}
             />
           </div>
+          <p className="text-[10px] text-slate-400 text-center mt-2 font-bold uppercase tracking-widest">
+            {formatTime(totalWorkoutSeconds - totalElapsed)} remaining
+          </p>
         </div>
         <div className="px-3 py-1 bg-slate-50 dark:bg-slate-900 rounded-full text-xs font-black text-slate-500 border border-slate-100 dark:border-slate-800">
           {currentExerciseIndex + 1}/{totalExercises}
@@ -280,9 +376,8 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center min-h-0 overflow-y-auto relative z-10">
         
         {/* Enhanced Timer Visualizer */}
-        <div className="mb-12 relative flex items-center justify-center shrink-0">
+        <div className="mb-8 relative flex items-center justify-center shrink-0">
           <svg width="320" height="320" className="transform -rotate-90">
-            {/* Soft Shadow Ring */}
             <circle
               cx="160"
               cy="160"
@@ -292,7 +387,6 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
               fill="transparent"
               className="text-slate-50 dark:text-slate-900/50"
             />
-            {/* Background Ring */}
             <circle
               cx="160"
               cy="160"
@@ -302,7 +396,6 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
               fill="transparent"
               className="text-slate-100 dark:text-slate-900"
             />
-            {/* Progress Ring */}
             <circle
               cx="160"
               cy="160"
@@ -318,25 +411,24 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
             />
           </svg>
            
-          {/* Inner Content - Larger Visualizer */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="mb-4">
               <ExerciseVisualizer type={currentExercise.type} isActive={isPlaying} />
             </div>
             <div className="flex flex-col items-center">
-                <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+              <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                 {formatTime(timeLeft)}
-                </span>
-                <span className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 mt-1 bg-slate-50 dark:bg-slate-900 px-3 py-0.5 rounded-full border border-slate-100 dark:border-slate-800">
+              </span>
+              <span className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 mt-1 bg-slate-50 dark:bg-slate-900 px-3 py-0.5 rounded-full border border-slate-100 dark:border-slate-800">
                 {currentExercise.type}
-                </span>
+              </span>
             </div>
           </div>
         </div>
 
         <div className="max-w-md w-full animate-in slide-in-from-bottom-4 duration-500">
           <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">{currentExercise.name}</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed mb-8 px-4">{currentExercise.description}</p>
+          <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed mb-6 px-4">{currentExercise.description}</p>
             
           {currentExercise.reps && (
             <div className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-black text-slate-700 dark:text-slate-200 shadow-xl shadow-slate-200/20 dark:shadow-none">
@@ -345,25 +437,40 @@ const WorkoutSessionPlayer: React.FC<WorkoutSessionProps> = ({ session, onComple
             </div>
           )}
         </div>
+
+        {/* Upcoming exercises preview */}
+        {currentExerciseIndex < totalExercises - 1 && (
+          <div className="w-full max-w-md mt-8 space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Up Next</p>
+            {session.exercises.slice(currentExerciseIndex + 1, currentExerciseIndex + 3).map((ex, idx) => (
+              <ExercisePreviewCard 
+                key={ex.id} 
+                exercise={ex} 
+                index={currentExerciseIndex + 1 + idx}
+                isNext={idx === 0}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modern Controls */}
       <div className="px-8 py-10 pb-12 bg-white dark:bg-slate-950 border-t border-slate-50 dark:border-slate-900 shrink-0 relative z-10">
-        <div className="flex items-center justify-between gap-6 max-w-md mx-auto">
+        <div className="flex items-center justify-between gap-4 max-w-md mx-auto">
           <button 
-            className="w-20 h-20 flex items-center justify-center rounded-3xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-all active:scale-90 shadow-lg"
+            className="w-16 h-16 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-all active:scale-90 shadow-lg"
             onClick={() => setIsPlaying(!isPlaying)}
           >
-            {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
+            {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
           </button>
 
           <button 
-            className="flex-1 h-20 text-white font-black text-lg rounded-3xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-2xl hover:brightness-110"
+            className="flex-1 h-16 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-2xl hover:brightness-110 uppercase tracking-wider"
             style={{ backgroundColor: themeColor, boxShadow: `0 20px 40px -10px ${themeColor}40` }}
             onClick={handleNext}
           >
-            {currentExerciseIndex === totalExercises - 1 ? 'Finish Session' : 'Next Move'}
-            <ChevronRight size={24} strokeWidth={3} />
+            {currentExerciseIndex === totalExercises - 1 ? 'Finish' : 'Skip'}
+            <SkipForward size={20} strokeWidth={3} />
           </button>
         </div>
       </div>
